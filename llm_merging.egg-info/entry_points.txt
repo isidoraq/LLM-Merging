@@ -1,0 +1,3 @@
+[llm_merging.merging.Merges]
+flan_t5_avg = llm_merging.merging.FlanT5Avg:FlanT5Avg
+llama_avg = llm_merging.merging.LlamaAvg:LlamaAvg

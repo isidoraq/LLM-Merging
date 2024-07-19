@@ -1,0 +1,6 @@
+Metadata-Version: 2.1
+Name: llm-merging
+Version: 1.0
+Summary: starter code for llm_merging
+Requires-Dist: torch
+Requires-Dist: ipdb

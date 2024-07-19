@@ -1,5 +1,4 @@
-import json
-
+import json 
 
 class Dataset(object):
     def __init__(
@@ -17,3 +16,4 @@ class Dataset(object):
 
     def __getitem__(self, idx):
         return self.dataset[idx]
+
