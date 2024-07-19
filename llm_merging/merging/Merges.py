@@ -170,6 +170,7 @@ class Merges(object):
     def merge(
         self,
     ):
+
         raise NotImplementedError
 
     def save_model(self, output_dir):

@@ -1,6 +1,7 @@
 README.md
 pyproject.toml
 setup.py
+llm_merging/config.py
 llm_merging/data.py
 llm_merging/evaluation.py
 llm_merging/main.py
