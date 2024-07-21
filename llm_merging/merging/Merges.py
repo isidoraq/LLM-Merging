@@ -32,7 +32,7 @@ class Merges(object):
         self.max_seq_len = None
         self.max_gen_len = None
 
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.device = None
         self.architecture = None
 
         self.merged_model = None

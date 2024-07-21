@@ -1,0 +1,1 @@
+{"cosmos_qa": {"accuracy": 0.736}, "xsum": {"rouge1": 0.37, "rouge2": 0.175, "rougeL": 0.318, "rougeLsum": 0.319}}

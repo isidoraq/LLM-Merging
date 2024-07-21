@@ -12,18 +12,20 @@ from config import settings
 def all_merge_handlers():
     """Enumerate and Load (import) all merge methods."""
     discovered_merges = entry_points(group="llm_merging.merging.Merges")
+    print("discovered_merges", discovered_merges)
+    print()
     loaded_merges = {ep.name: ep.load() for ep in discovered_merges}
+    print("loaded_merges", loaded_merges)
     return loaded_merges
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("-m", "--merging_method", type=str, required=False)
-    parser.add_argument(
-        "--dataset_filepaths", type=str, default=settings.data_dir, nargs="+"
-    )
+    parser.add_argument("--dataset_filepaths", type=str, default=None, nargs="+")
     parser.add_argument("--eval_types", type=str, default=None, nargs="+")
     args = parser.parse_args()
+    args.merging_method = "llama3_avg"
 
     # Load correct merging method
     loaded_merges = all_merge_handlers()

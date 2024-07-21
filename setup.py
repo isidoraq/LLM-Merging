@@ -12,6 +12,7 @@ setup(
     entry_points={
         "llm_merging.merging.Merges": [
             "llama_avg = llm_merging.merging.LlamaAvg:LlamaAvg",
+            "llama3_avg = llm_merging.merging.Llama3Avg:Llama3Avg",
             "flan_t5_avg = llm_merging.merging.FlanT5Avg:FlanT5Avg",
         ]
     },

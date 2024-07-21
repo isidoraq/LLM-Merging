@@ -14,7 +14,7 @@ class LlamaAvg(Merges):
         # Give a list of models to load for the merge. Each element is the list a is a tuple of (model, revision_id). We recommend specifying a revision id to ensure the model was not modified after May 31
         self.list_models = [
             (
-                "abcdabcd987/gsm8k-llama2-7b-lora-16",
+                "abcdabcd987/gsm8k-llama2-b-lora-16",
                 "636b5eb8da724edae406ba69ef90fd06478e6df7",
             ),
             (
