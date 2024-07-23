@@ -15,12 +15,12 @@ class Llama3Avg(Merges):
         # Give a list of models to load for the merge. Each element is the list a is a tuple of (model, revision_id). We recommend specifying a revision id to ensure the model was not modified after May 31
         self.list_models = [
             (
-                "philschmid/Llama-3-70b-lora",
+                "s50227harry/llama-3-8B-lora",
                 None,
                 #"abcdabcd987/gsm8k-llama2-7b-lora-16",
                 #"636b5eb8da724edae406ba69ef90fd06478e6df7",
             ),
-            (   "Dogge/llama-3-70B-instruct-uncensored-lora",
+            (   "zjunlp/llama3-8b-iepile-lora",
                 None,
                 #"FinGPT/fingpt-forecaster_dow30_llama2-7b_lora",
                 #"69f77190315afdb03a889d89bf2a0f932b311617",
@@ -29,6 +29,7 @@ class Llama3Avg(Merges):
 
         # Hyperparameters
         self.base_model_name = "meta-llama/Meta-Llama-3-8B"
+        
         # We recommend specifying a revision id to ensure the model was not modified after May 31
         #self.base_model_revision_id = "01c7f73d771dfac7d292323805ebc428287df4f9"
 
@@ -68,39 +69,30 @@ class Llama3Avg(Merges):
         # Get all the parameters names (uses the first model and assume all the models have the same parameter)
         all_parameter_names = all_models[0].keys()
         torch.cuda.empty_cache()
+        # Merge the models
+        max_lora_rank = max(model['base_model.model.model.layers.0.mlp.down_proj.lora_A.weight'].shape[0] for model in all_models)
+
         for parameter_name in all_parameter_names:
             merged_parameter = None
             for parameter_lambda, model in zip(parameter_lambdas, all_models):
                 parameter = model[parameter_name]
+                
+                # Handle LoRA rank mismatch
+                if 'lora_A.weight' in parameter_name:
+                    current_rank = parameter.shape[0]
+                    if current_rank < max_lora_rank:
+                        padding = torch.zeros(max_lora_rank - current_rank, parameter.shape[1], device=parameter.device)
+                        parameter = torch.cat([parameter, padding], dim=0)
+                elif 'lora_B.weight' in parameter_name:
+                    current_rank = parameter.shape[1]
+                    if current_rank < max_lora_rank:
+                        padding = torch.zeros(parameter.shape[0], max_lora_rank - current_rank, device=parameter.device)
+                        parameter = torch.cat([parameter, padding], dim=1)
+
                 if merged_parameter is None:
-                    merged_parameter = torch.clone(parameter) * parameter_lambda
+                    merged_parameter = parameter * parameter_lambda
                 else:
-                    # Add debug prints
-                    print(f"Parameter name: {parameter_name}")
-                    print(f"Shape of merged_parameter: {merged_parameter.shape}")
-                    print(f"Shape of parameter: {parameter.shape}")
-
-                    # More robust size checking and handling
-                    if merged_parameter.size(0) != parameter.size(0):
-                        if "A" in parameter_name:
-                            if merged_parameter.size(0) > parameter.size(0):
-                                parameter = torch.cat([torch.zeros_like(parameter), parameter], dim=0)
-                            else:
-                                merged_parameter = torch.cat([torch.zeros_like(parameter), merged_parameter], dim=0)
-                        elif "B" in parameter_name:
-                            if merged_parameter.size(1) > parameter.size(1):
-                                parameter = torch.cat([torch.zeros_like(parameter), parameter], dim=1)
-                            else:
-                                merged_parameter = torch.cat([torch.zeros_like(parameter), merged_parameter], dim=1)
-                        else:
-                            print(f"Warning: Parameter {parameter_name} doesn't follow A/B naming convention")
-                            # Handle this case as appropriate for your models
-
-                # After size adjustment, print shapes again
-                print(f"Adjusted shape of merged_parameter: {merged_parameter.shape}")
-                print(f"Adjusted shape of parameter: {parameter.shape}")
-
-                merged_parameter += parameter * parameter_lambda
+                    merged_parameter += parameter * parameter_lambda
 
             self.merged_model[parameter_name] = merged_parameter
         torch.cuda.empty_cache()
@@ -108,6 +100,7 @@ class Llama3Avg(Merges):
         3) Load base model and tokenizer
         """
         self._load_base_model()
+        self.base_model.gradient_checkpointing_enable()
         self._load_tokenizer()
 
         """

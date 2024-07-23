@@ -49,12 +49,14 @@ class Merges(object):
                 self.base_model_name,
                 revision=self.base_model_revision_id,
                 token=os.environ["HF_AUTH_TOKEN"],
+                load_in_8bit=True
             ).to(self.device)
         elif self.architecture == "decoder":
             self.base_model = AutoModelForCausalLM.from_pretrained(
                 self.base_model_name,
                 revision=self.base_model_revision_id,
                 token=os.environ["HF_AUTH_TOKEN"],
+                load_in_8bit=True
             ).to(self.device)
         else:
             raise NotImplementedError(
