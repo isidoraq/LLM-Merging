@@ -25,7 +25,7 @@ if __name__ == "__main__":
     parser.add_argument("--dataset_filepaths", type=str, default=None, nargs="+")
     parser.add_argument("--eval_types", type=str, default=None, nargs="+")
     args = parser.parse_args()
-    args.merging_method = "llama3_avg"
+    args.merging_method = "flan_t5_avg"
 
     # Load correct merging method
     loaded_merges = all_merge_handlers()
@@ -55,7 +55,7 @@ if __name__ == "__main__":
         # Evaluate method on fixed datasets (used for developing method)
         evaluate_model(
             merge_method,
-            ["data/cosmos_qa.json", "data/xsum.json"],
+            ["/home/ubuntu/LLM-Merging/data/cosmos_qa.json", "/home/ubuntu/LLM-Merging/data/xsum.json"],
             ["multiple_choice", "generation"],
             ["accuracy", "rouge"],
         )

@@ -1,38 +1,46 @@
 import torch
 
 from llm_merging.merging.Merges import Merges
-
 from peft import get_peft_model, set_peft_model_state_dict
 
+torch.cuda.empty_cache()
 
-class FlanT5Avg(Merges):
+
+class Llama3Avg(Merges):
     def __init__(self, name):
         super().__init__(name)
 
         """
         These values are meant to be modified by the user.
         """
-        # Give a list of models to load for the merge
+        # Give a list of models to load for the merge. Each element is the list a is a tuple of (model, revision_id). We recommend specifying a revision id to ensure the model was not modified after May 31
         self.list_models = [
             (
-                "lorahub/flan_t5_xl-wiki_qa_Is_This_True_",
-                "30a1ee2f857196c1eb996d854548cc19f45ac642",
+                "s50227harry/llama-3-8B-lora",
+                None,
+                # "abcdabcd987/gsm8k-llama2-7b-lora-16",
+                # "636b5eb8da724edae406ba69ef90fd06478e6df7",
             ),
             (
-                "lorahub/flan_t5_xl-kilt_tasks_hotpotqa_complex_question",
-                "27d014366bec1c5333ba2e2fae966b7de3c02df1",
+                "zjunlp/llama3-8b-iepile-lora",
+                None,
+                # "FinGPT/fingpt-forecaster_dow30_llama2-7b_lora",
+                # "69f77190315afdb03a889d89bf2a0f932b311617",
             ),
         ]
 
         # Hyperparameters
-        self.base_model_name = "google/flan-t5-xl"
-        self.base_model_revision_id = "7d6315df2c2fb742f0f5b556879d730926ca9001"
-        self.max_seq_len = 512
+        self.base_model_name = "meta-llama/Meta-Llama-3-8B"
+
+        # We recommend specifying a revision id to ensure the model was not modified after May 31
+        # self.base_model_revision_id = "01c7f73d771dfac7d292323805ebc428287df4f9"
+
+        self.max_seq_len = None
+        self.max_gen_len = 64
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
         # Architecture must match base model.
-        self.architecture = "encoder_decoder"
-
+        self.architecture = "decoder"
         """
         These are variables used later in the code and not intended to be set, but feel free to adapt to your use case.  
         """
@@ -52,31 +60,62 @@ class FlanT5Avg(Merges):
         1) Load HuggingFace checkpoints and configs
         """
         super()._load_huggingface_models_and_configs()
-
         """
         2) Merge checkpoints  
         """
-        parameter_lambdas = [0.2, 0.8]
+        parameter_lambdas = [0.8, 0.2]
 
         # Get individual models
         all_models = list(self.loaded_models.values())
 
         # Get all the parameters names (uses the first model and assume all the models have the same parameter)
         all_parameter_names = all_models[0].keys()
+        torch.cuda.empty_cache()
+        # Merge the models
+        max_lora_rank = max(
+            model["base_model.model.model.layers.0.mlp.down_proj.lora_A.weight"].shape[
+                0
+            ]
+            for model in all_models
+        )
 
         for parameter_name in all_parameter_names:
             merged_parameter = None
             for parameter_lambda, model in zip(parameter_lambdas, all_models):
                 parameter = model[parameter_name]
+
+                # Handle LoRA rank mismatch
+                if "lora_A.weight" in parameter_name:
+                    current_rank = parameter.shape[0]
+                    if current_rank < max_lora_rank:
+                        padding = torch.zeros(
+                            max_lora_rank - current_rank,
+                            parameter.shape[1],
+                            device=parameter.device,
+                        )
+                        parameter = torch.cat([parameter, padding], dim=0)
+                elif "lora_B.weight" in parameter_name:
+                    current_rank = parameter.shape[1]
+                    if current_rank < max_lora_rank:
+                        padding = torch.zeros(
+                            parameter.shape[0],
+                            max_lora_rank - current_rank,
+                            device=parameter.device,
+                        )
+                        parameter = torch.cat([parameter, padding], dim=1)
+
                 if merged_parameter is None:
-                    merged_parameter = torch.clone(parameter) * parameter_lambda
+                    merged_parameter = parameter * parameter_lambda
                 else:
                     merged_parameter += parameter * parameter_lambda
+
             self.merged_model[parameter_name] = merged_parameter
+        torch.cuda.empty_cache()
         """
-        3) Load base model and tokenizer 
+        3) Load base model and tokenizer
         """
         self._load_base_model()
+        self.base_model.gradient_checkpointing_enable()
         self._load_tokenizer()
 
         """
